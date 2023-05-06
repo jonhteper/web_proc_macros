@@ -12,7 +12,7 @@ pub fn impl_kind(input: TokenStream) -> TokenStream {
     let variants = if let syn::Data::Enum(data) = input.data {
         data.variants
     } else {
-        panic!("ImplKind solo puede ser utilizado en enums");
+        panic!("ImplKind just can be used in enums");
     };
 
     let mut kind_variants = Vec::new();
@@ -22,33 +22,35 @@ pub fn impl_kind(input: TokenStream) -> TokenStream {
         if let Some(attr) = variant.attrs.into_iter().find(|attr| attr.path.is_ident("error_kind")) {
             if let Ok(syn::Meta::List(meta)) = attr.parse_meta() {
                 if meta.nested.len() == 2 {
-                    if let (syn::NestedMeta::Meta(syn::Meta::Path(kind)), syn::NestedMeta::Lit(syn::Lit::Str(variant))) =
+                    if let (syn::NestedMeta::Meta(syn::Meta::Path(kind)), syn::NestedMeta::Meta(syn::Meta::Path(variant))) =
                         (&meta.nested[0], &meta.nested[1])
                     {
-                        kind_variants.push((ident, kind.clone(), variant.value()));
+                        kind_variants.push((ident, kind.clone(), variant.clone()));
                     } else {
-                        panic!("Valor inválido para error_kind");
+                        panic!("Invalid value for error_kind");
                     }
                 } else {
-                    panic!("error_kind debe tener dos argumentos");
+                    panic!("error_kind must have two arguments");
                 }
             } else {
-                panic!("Error en meta list");
+                panic!("Error parsing meta");
             }
         } else {
-            panic!("Variantes deben tener el atributo error_kind");
+            panic!("Enum variants must have the attribute `error_kind`");
         }
     }
 
+    let kind_enum = kind_variants.first().expect("No variants in Enum").1.clone();
     let match_arms = kind_variants.into_iter().map(|(ident, kind, variant)| {
         quote! {
             Self::#ident => #kind::#variant,
         }
     });
+    
 
     let expanded = quote! {
         impl #name {
-            pub fn kind(&self) -> ErrorKind {
+            pub fn kind(&self) -> #kind_enum {
                 match self {
                     #(#match_arms)*
                 }
