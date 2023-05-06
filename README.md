@@ -42,6 +42,9 @@ use web_proc_macros::insert_query;
 fn main() {
     let query = insert_query!("table_name", "col1", "col2", "col3", "col4");
     println!("{}", query); // INSERT INTO table_name (col1, col2, col3, col4) VALUES (:col1, :col2, :col3, :col4)
+
+    let query = insert_query!(&format!("TABLE"), "col1", "col2");
+    println!("{}", query); // INSERT INTO TABLE (col1, col2) VALUES (:col1, :col2)
 }
 
 ```
