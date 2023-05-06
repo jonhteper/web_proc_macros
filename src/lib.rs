@@ -88,7 +88,7 @@ pub fn insert_query(input: TokenStream) -> TokenStream {
     let table_name = &input.table_name;
     let cols = &input.cols;
 
-    let col_names: Vec<_> = cols.iter().map(|col| format!("{}", col.value())).collect();
+    let col_names: Vec<_> = cols.iter().map(|col| col.value()).collect();
     let col_values: Vec<_> = cols.iter().map(|col| format!(":{}", col.value())).collect();
 
     let col_names = col_names.join(", ");
