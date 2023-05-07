@@ -2,7 +2,10 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput, Result, parse::{Parse, ParseStream}, LitStr, Expr};
+use syn::{
+    parse::{Parse, ParseStream},
+    parse_macro_input, DeriveInput, Expr, LitStr, Result,
+};
 
 #[proc_macro_derive(ImplKind, attributes(error_kind))]
 pub fn impl_kind(input: TokenStream) -> TokenStream {
@@ -17,13 +20,19 @@ pub fn impl_kind(input: TokenStream) -> TokenStream {
 
     let mut kind_variants = Vec::new();
 
-    for variant in variants {
+    for variant in variants.clone() {
         let ident = variant.ident;
-        if let Some(attr) = variant.attrs.into_iter().find(|attr| attr.path.is_ident("error_kind")) {
+        if let Some(attr) = variant
+            .attrs
+            .into_iter()
+            .find(|attr| attr.path.is_ident("error_kind"))
+        {
             if let Ok(syn::Meta::List(meta)) = attr.parse_meta() {
                 if meta.nested.len() == 2 {
-                    if let (syn::NestedMeta::Meta(syn::Meta::Path(kind)), syn::NestedMeta::Meta(syn::Meta::Path(variant))) =
-                        (&meta.nested[0], &meta.nested[1])
+                    if let (
+                        syn::NestedMeta::Meta(syn::Meta::Path(kind)),
+                        syn::NestedMeta::Meta(syn::Meta::Path(variant)),
+                    ) = (&meta.nested[0], &meta.nested[1])
                     {
                         kind_variants.push((ident, kind.clone(), variant.clone()));
                     } else {
@@ -40,13 +49,31 @@ pub fn impl_kind(input: TokenStream) -> TokenStream {
         }
     }
 
-    let kind_enum = kind_variants.first().expect("No variants in Enum").1.clone();
+    let kind_enum = kind_variants
+        .first()
+        .expect("No variants in Enum")
+        .1
+        .clone();
     let match_arms = kind_variants.into_iter().map(|(ident, kind, variant)| {
-        quote! {
-            Self::#ident => #kind::#variant,
+        let fields = &variants.iter().find(|v| v.ident == ident).unwrap().fields;
+        match fields {
+            syn::Fields::Unit => {
+                quote! {
+                    Self::#ident => #kind::#variant,
+                }
+            }
+            syn::Fields::Named(_) => {
+                quote! {
+                    Self::#ident{..} => #kind::#variant,
+                }
+            }
+            syn::Fields::Unnamed(_) => {
+                quote! {
+                    Self::#ident(..) => #kind::#variant,
+                }
+            }
         }
     });
-    
 
     let expanded = quote! {
         impl #name {
@@ -60,7 +87,6 @@ pub fn impl_kind(input: TokenStream) -> TokenStream {
 
     TokenStream::from(expanded)
 }
-
 
 struct InsertQueryInput {
     table_name: Expr,

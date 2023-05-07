@@ -8,7 +8,7 @@ Use example:
 ```rust 
 
 use web_proc_macros::ImplKind;
-;
+
 #[derive(Debug)]
 pub enum MyErrorKind {
     Kind1,
@@ -19,13 +19,18 @@ pub enum MyErrorKind {
 #[derive(ImplKind)]
 pub enum MyError {
     #[error_kind(MyErrorKind, Kind1)]
-    ErrorA,
+    ErrorA(String),
     #[error_kind(MyErrorKind, Kind2)]
-    ErrorB
+    ErrorB,
+    #[error_kind(MyErrorKind, Kind2)]
+    ErrorC {
+        content: String,
+        line: usize,
+    },
 }
 
 fn main() {
-    println!("{:?}", MyError::ErrorA.kind()); // Kind1
+    println!("{:?}", MyError::ErrorA("err".to_string()).kind()); // Kind1
 }
 
 ```
