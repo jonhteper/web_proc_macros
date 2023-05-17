@@ -108,6 +108,14 @@ impl Parse for InsertQueryInput {
     }
 }
 
+/// Use select_query(TABLE_NAME, COLUMS_LIST...)
+/// # Examples
+/// ```
+/// use web_proc_macros::insert_query;
+/// 
+/// let query = insert_query!("table", "col1", "col2");
+/// assert_eq!(query, "INSERT INTO table (col1, col2) VALUES (:col1, :col2)");
+/// ```
 #[proc_macro]
 pub fn insert_query(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as InsertQueryInput);
@@ -126,6 +134,143 @@ pub fn insert_query(input: TokenStream) -> TokenStream {
             #table_name,
             #col_names,
             #col_values
+        )
+    };
+
+    TokenStream::from(expanded)
+}
+
+struct SelectUpdateQueryInput {
+    table_name: Expr,
+    where_clause: Expr,
+    cols: Vec<LitStr>,
+}
+
+impl Parse for SelectUpdateQueryInput {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let table_name = input.parse()?;
+        input.parse::<syn::Token![,]>()?;
+
+        let where_clause = input.parse()?;
+        input.parse::<syn::Token![,]>()?;
+
+        let mut cols = Vec::new();
+        while !input.is_empty() {
+            cols.push(input.parse()?);
+            if input.peek(syn::Token![,]) {
+                input.parse::<syn::Token![,]>()?;
+            }
+        }
+        Ok(SelectUpdateQueryInput { table_name, where_clause, cols })
+    }
+}
+
+
+/// Use select_query(TABLE_NAME, WHERE_CLAUSE, COLUMS_LIST...)
+/// # Examples
+/// ```
+/// use web_proc_macros::select_query;
+/// 
+/// let query = select_query!("table", "id = :id", "col1", "col2");
+/// assert_eq!(query, "SELECT col1, col2 FROM table WHERE id = :id");    
+/// ```
+/// 
+/// ```
+/// use web_proc_macros::select_query;
+/// 
+/// let query = select_query!("table", "id = :id", "*");
+/// assert_eq!(query, "SELECT * FROM table WHERE id = :id");    
+/// ```
+#[proc_macro]
+pub fn select_query(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as SelectUpdateQueryInput);
+    let table_name = &input.table_name;
+    let where_clause = &input.where_clause;
+    let cols = &input.cols;
+
+    let colums: Vec<_> = cols.iter().map(|col| col.value()).collect();
+    let colums = colums.join(", ");
+
+    let expanded = quote! {
+        format!(
+            "SELECT {} FROM {} WHERE {}",
+            #colums,
+            #table_name,
+            #where_clause,
+        )
+    };
+
+    TokenStream::from(expanded)
+}
+
+
+
+/// Use update_query!(TABLE_NAME, WHERE_CLAUSE, COLUMS_LIST...)
+/// # Examples
+/// ```
+/// use web_proc_macros::update_query;
+/// 
+/// let query = update_query!("table", "id = :id", "col1", "col2");
+/// assert_eq!(query, "UPDATE table SET col1 = :col1, col2 = :col2 WHERE id = :id");    
+/// ```
+#[proc_macro]
+pub fn update_query(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as SelectUpdateQueryInput);
+    let table_name = &input.table_name;
+    let where_clause = &input.where_clause;
+    let cols = &input.cols;
+
+    let col_pairs: Vec<_> = cols.iter().map(|col| format!("{} = :{}", col.value(), col.value())).collect();
+    let col_pairs = col_pairs.join(", ");
+
+    let expanded = quote! {
+        format!(
+            "UPDATE {} SET {} WHERE {}",
+            #table_name,
+            #col_pairs,
+            #where_clause,
+        )
+    };
+
+    TokenStream::from(expanded)
+}
+
+struct DeleteQueryInput {
+    table_name: Expr,
+    where_clause: Expr,
+}
+
+impl Parse for DeleteQueryInput {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let table_name = input.parse()?;
+        input.parse::<syn::Token![,]>()?;
+
+        let where_clause = input.parse()?;
+
+        Ok(DeleteQueryInput { table_name, where_clause })
+    }
+}
+
+/// Use delete_query!(TABLE_NAME, WHERE_CLAUSE)
+/// # Examples
+/// ```
+/// use web_proc_macros::delete_query;
+/// 
+/// let query = delete_query!("table", "id = :id");
+/// assert_eq!(query, "DELETE FROM table WHERE id = :id");
+/// ```
+#[proc_macro]
+pub fn delete_query(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeleteQueryInput);
+    let table_name = &input.table_name;
+    let where_clause = &input.where_clause;
+    
+
+    let expanded = quote! {
+        format!(
+            "DELETE FROM {} WHERE {}",
+            #table_name,
+            #where_clause,
         )
     };
 
