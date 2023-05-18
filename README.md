@@ -35,21 +35,50 @@ fn main() {
 
 ```
 
-## insert_query macro
-Makes an insert query for [mysql](https://crates.io/crates/mysql)
+## Macros for [mysql](https://crates.io/crates/mysql) stmt
 
-```rust 
-#[allow(unused_imports)]
+### INSERT
+```rust
+use web_proc_macros::insert_stmt_query;
 
-use web_proc_macros::insert_query;
+let query = insert_stmt_query!("table", "col1", "col2");
+assert_eq!(query, "INSERT INTO table (col1, col2) VALUES (:col1, :col2)");
+```
 
+### SELECT
+```rust
+use web_proc_macros::select_stmt_query;
 
-fn main() {
-    let query = insert_query!("table_name", "col1", "col2", "col3", "col4");
-    println!("{}", query); // INSERT INTO table_name (col1, col2, col3, col4) VALUES (:col1, :col2, :col3, :col4)
+let where_clause = "id = :id";
+let query = select_stmt_query!("table", "col1", "col2", where_clause);
+assert_eq!(query, "SELECT col1, col2 FROM table WHERE id = :id");    
+```
 
-    let query = insert_query!(&format!("TABLE"), "col1", "col2");
-    println!("{}", query); // INSERT INTO TABLE (col1, col2) VALUES (:col1, :col2)
-}
+```rust
+use web_proc_macros::select_stmt_query;
 
+let query = select_stmt_query!("table", "*", "id = :id");
+assert_eq!(query, "SELECT * FROM table WHERE id = :id");    
+```
+```rust
+use web_proc_macros::select_stmt_query;
+
+let query = select_stmt_query!("table", "*");
+assert_eq!(query, "SELECT * FROM table");    
+```
+
+### UPDATE
+```rust
+use web_proc_macros::update_stmt_query;
+
+let query = update_stmt_query!("table", "col1", "col2", "id = :id");
+assert_eq!(query, "UPDATE table SET col1 = :col1, col2 = :col2 WHERE id = :id");    
+```
+
+### DELETE
+```rust
+use web_proc_macros::delete_stmt_query;
+
+let query = delete_stmt_query!("table", "id = :id");
+assert_eq!(query, "DELETE FROM table WHERE id = :id");
 ```
