@@ -26,6 +26,13 @@ pub fn insert_stmt_query(input: TokenStream) -> TokenStream {
     insert_macro::insert_stmt_macro(input)
 }
 
+/// Alias to [update_stmt_query]
+#[allow(non_snake_case)]
+#[proc_macro]
+pub fn INSERT(input: TokenStream) -> TokenStream {
+    insert_macro::insert_stmt_macro(input)
+}
+
 /// Use select_stmt_query!(TABLE_NAME, COLUMS_LIST..., WHERE_CLAUSE)
 /// # Examples
 /// ```
@@ -53,6 +60,13 @@ pub fn select_stmt_query(input: TokenStream) -> TokenStream {
     select_macro::select_stmt_macro(input)
 }
 
+/// Alias to [select_stmt_query]
+#[allow(non_snake_case)]
+#[proc_macro]
+pub fn SELECT(input: TokenStream) -> TokenStream {
+    select_macro::select_stmt_macro(input)
+}
+
 /// Use update_stmt_query!(TABLE_NAME, COLUMS_LIST..., WHERE_CLAUSE)
 /// # Examples
 /// ```
@@ -63,6 +77,13 @@ pub fn select_stmt_query(input: TokenStream) -> TokenStream {
 /// ```
 #[proc_macro]
 pub fn update_stmt_query(input: TokenStream) -> TokenStream {
+    update_macro::update_stmt_macro(input)
+}
+
+/// Alias to [update_stmt_query]
+#[allow(non_snake_case)]
+#[proc_macro]
+pub fn UPDATE(input: TokenStream) -> TokenStream {
     update_macro::update_stmt_macro(input)
 }
 
@@ -78,3 +99,11 @@ pub fn update_stmt_query(input: TokenStream) -> TokenStream {
 pub fn delete_stmt_query(input: TokenStream) -> TokenStream {
     delete_macro::delete_stmt_macro(input)
 }
+
+/// Alias to [delete_stmt_query]
+#[allow(non_snake_case)]
+#[proc_macro]
+pub fn DELETE(input: TokenStream) -> TokenStream {
+    delete_macro::delete_stmt_macro(input)
+}
+
