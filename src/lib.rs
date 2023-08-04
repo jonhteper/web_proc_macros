@@ -109,11 +109,47 @@ pub fn DELETE(input: TokenStream) -> TokenStream {
     delete_macro::delete_stmt_macro(input)
 }
 
-/// Generates an Struct with only the non-skipped fields
+/// Generates a public fields struct.
 ///
-/// WARNING: Is neccessary import macros Serialize and Deserialize to use.
+/// WARNING: It's neccessary import macros Serialize and Deserialize to use.
 ///
 /// # Examples
+/// ```
+/// use web_proc_macros::StructValues;
+/// use serde_derive::{Serialize, Deserialize};
+///
+/// #[derive(StructValues)]
+/// pub struct User {
+///     id: String,
+///     name: String,
+///     status: u8,
+///     groups: Vec<String>,
+/// }
+///
+/// impl User {
+///     fn from_values(values: UserValues) -> Self {
+///         Self {
+///             id: values.id,
+///             name: values.name,
+///             status: values.status,
+///             groups: values.groups
+///         }
+///     }
+/// }
+///
+/// let _user = User::from_values(
+///     UserValues {
+///         id: "id.1".to_string(),
+///         name: "example".to_string(),
+///         status: 0,
+///         groups: vec!["Group1".to_string(), "Group2".to_string()],
+///     }
+/// );
+///
+///
+/// ```
+///
+/// Is possible to ignore fields with `#[struct_values(skip)]`:
 /// ```
 /// use web_proc_macros::StructValues;
 /// use serde_derive::{Serialize, Deserialize};
@@ -127,20 +163,88 @@ pub fn DELETE(input: TokenStream) -> TokenStream {
 ///     groups: Vec<String>,
 /// }
 ///
-/// let modifier = UserValues {
-///     name: Some("example".to_string()),
-///     groups: Some(vec!["Group1".to_string(), "Group2".to_string()]),
-///     ..Default::default()
+/// let _values = UserValues {
+///     name: "example".to_string(),
+///     status: 0,
+///     groups: vec!["Group1".to_string(), "Group2".to_string()],
 /// };
-///
-/// dbg!(&modifier.name);
-///
 /// ```
 #[proc_macro_derive(StructValues, attributes(struct_values))]
 pub fn derive_struct_values(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let name = input.ident;
     let values_name = format!("{}Values", name);
+    let values_ident = syn::Ident::new(&values_name, name.span());
+
+    let fields = if let Data::Struct(data_struct) = input.data {
+        data_struct.fields
+    } else {
+        panic!("StructValues only supports structs with named fields");
+    };
+
+    let fields = if let Fields::Named(f) = fields {
+        f.named
+    } else {
+        panic!("StructValues only supports structs with named fields");
+    };
+
+    let mut values_fields = Vec::new();
+    for field in fields {
+        if field
+            .attrs
+            .iter()
+            .any(|attr| attr.path.is_ident("struct_values"))
+        {
+            continue;
+        }
+        let field_name = field.ident.unwrap();
+        let field_type = field.ty;
+        values_fields.push(quote! {
+            pub #field_name: #field_type,
+        });
+    }
+
+    let expanded = quote! {
+        #[derive(Serialize, Deserialize, Debug, Clone)]
+        pub struct #values_ident {
+            #(#values_fields)*
+        }
+    };
+
+    TokenStream::from(expanded)
+}
+
+/// Generates a public and full-optional fields struct.
+///
+/// WARNING: It's neccessary import macros Serialize and Deserialize to use.
+///
+/// # Examples
+/// ```
+/// use web_proc_macros::OptStructValues;
+/// use serde_derive::{Serialize, Deserialize};
+///
+/// #[derive(OptStructValues)]
+/// pub struct User {
+///     #[struct_values(skip)]
+///     id: String,
+///     name: String,
+///     status: u8,
+///     groups: Vec<String>,
+/// }
+///
+/// let _opt_values = UserOptValues {
+///     name: Some("example".to_string()),
+///     groups: Some(vec!["Group1".to_string(), "Group2".to_string()]),
+///     status: None,
+/// };
+///
+///
+/// ```
+#[proc_macro_derive(OptStructValues, attributes(struct_values))]
+pub fn derive_opt_struct_values(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    let name = input.ident;
+    let values_name = format!("{}OptValues", name);
     let values_ident = syn::Ident::new(&values_name, name.span());
 
     let fields = if let Data::Struct(data_struct) = input.data {

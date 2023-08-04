@@ -82,3 +82,83 @@ use web_proc_macros::delete_stmt_query;
 let query = delete_stmt_query!("table", "id = :id");
 assert_eq!(query, "DELETE FROM table WHERE id = :id");
 ```
+
+## 'Derived' structs macros
+
+## StructValues
+
+Generates a public fields struct.
+```rust
+use web_proc_macros::StructValues;
+use serde_derive::{Serialize, Deserialize};
+
+#[derive(StructValues)]
+pub struct User {
+    id: String,
+    name: String,
+    status: u8,
+    groups: Vec<String>,
+}
+impl User {
+    fn from_values(values: UserValues) -> Self {
+        Self {
+            id: values.id,
+            name: values.name,
+            status: values.status,
+            groups: values.groups
+        }
+    }
+}
+let _user = User::from_values(
+    UserValues {
+        id: "id.1".to_string(),
+        name: "example".to_string(),
+        status: 0,
+        groups: vec!["Group1".to_string(), "Group2".to_string()],
+    }
+);
+```
+
+Is possible to ignore fields with `#[struct_values(skip)]`:
+
+```rust
+use web_proc_macros::StructValues;
+use serde_derive::{Serialize, Deserialize};
+#[derive(StructValues)]
+pub struct User {
+    #[struct_values(skip)]
+    id: String,
+    name: String,
+    status: u8,
+    groups: Vec<String>,
+}
+let _values = UserValues {
+    name: "example".to_string(),
+    status: 0,
+    groups: vec!["Group1".to_string(), "Group2".to_string()],
+};
+```
+
+## OptStructValues
+Generates a public and full-optional fields struct.
+
+ ```rust
+ use web_proc_macros::OptStructValues;
+ use serde_derive::{Serialize, Deserialize};
+
+ #[derive(OptStructValues)]
+ pub struct User {
+     #[struct_values(skip)]
+     id: String,
+     name: String,
+     status: u8,
+     groups: Vec<String>,
+ }
+
+ let _opt_values = UserOptValues {
+     name: Some("example".to_string()),
+     groups: Some(vec!["Group1".to_string(), "Group2".to_string()]),
+     status: None,
+ };
+ ```
+
