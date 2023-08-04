@@ -225,7 +225,7 @@ pub fn derive_struct_values(input: TokenStream) -> TokenStream {
 ///
 /// #[derive(OptStructValues)]
 /// pub struct User {
-///     #[struct_values(skip)]
+///     #[opt_struct_values(skip)]
 ///     id: String,
 ///     name: String,
 ///     status: u8,
@@ -240,7 +240,7 @@ pub fn derive_struct_values(input: TokenStream) -> TokenStream {
 ///
 ///
 /// ```
-#[proc_macro_derive(OptStructValues, attributes(struct_values))]
+#[proc_macro_derive(OptStructValues, attributes(opt_struct_values))]
 pub fn derive_opt_struct_values(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let name = input.ident;
@@ -264,7 +264,7 @@ pub fn derive_opt_struct_values(input: TokenStream) -> TokenStream {
         if field
             .attrs
             .iter()
-            .any(|attr| attr.path.is_ident("struct_values"))
+            .any(|attr| attr.path.is_ident("opt_struct_values"))
         {
             continue;
         }

@@ -148,7 +148,7 @@ Generates a public and full-optional fields struct.
 
  #[derive(OptStructValues)]
  pub struct User {
-     #[struct_values(skip)]
+     #[opt_struct_values(skip)]
      id: String,
      name: String,
      status: u8,
