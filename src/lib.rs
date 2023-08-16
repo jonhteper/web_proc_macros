@@ -169,12 +169,49 @@ pub fn DELETE(input: TokenStream) -> TokenStream {
 ///     groups: vec!["Group1".to_string(), "Group2".to_string()],
 /// };
 /// ```
+///
+/// This macro supports lifetimes and generics:
+/// ```
+/// use web_proc_macros::StructValues;
+/// use serde_derive::{Serialize, Deserialize};
+///
+/// pub trait Foo {
+///     fn foo(&self) -> bool;
+/// }
+/// #[derive(Debug, Serialize, Deserialize, Clone)]
+/// struct FooImpl;
+///
+/// impl Foo for FooImpl {
+///     fn foo(&self) -> bool {
+///         true
+///     }
+/// }
+///
+/// #[derive(StructValues)]
+/// pub struct User<'a, F> 
+/// where
+///     F: Foo
+/// {
+///     id: &'a str,
+///     name: &'a str,
+///     foo: F,
+/// }
+///
+/// let _values = UserValues {
+///     id: "example.id",
+///     name: "Example User",
+///     foo: FooImpl,
+/// };
+/// ```
 #[proc_macro_derive(StructValues, attributes(struct_values))]
 pub fn derive_struct_values(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let name = input.ident;
     let values_name = format!("{}Values", name);
     let values_ident = syn::Ident::new(&values_name, name.span());
+    let lifetimes: Vec<_> = input.generics.lifetimes().collect();
+    let type_params: Vec<_> = input.generics.type_params().collect();
+    let where_clause = &input.generics.where_clause;
 
     let fields = if let Data::Struct(data_struct) = input.data {
         data_struct.fields
@@ -206,7 +243,7 @@ pub fn derive_struct_values(input: TokenStream) -> TokenStream {
 
     let expanded = quote! {
         #[derive(Serialize, Deserialize, Debug, Clone)]
-        pub struct #values_ident {
+        pub struct #values_ident<#(#lifetimes,)* #(#type_params),*> #where_clause {
             #(#values_fields)*
         }
     };
