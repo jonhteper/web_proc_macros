@@ -1,8 +1,12 @@
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
+use proc_macro2::Ident;
 use quote::quote;
-use syn::{parse_macro_input, Data, DeriveInput, Fields};
+use syn::{
+    parse::{Parse, ParseStream},
+    parse_macro_input, Data, DeriveInput, Fields, Token,
+};
 
 mod delete_macro;
 mod impl_kind_macro;
@@ -109,6 +113,54 @@ pub fn DELETE(input: TokenStream) -> TokenStream {
     delete_macro::delete_stmt_macro(input)
 }
 
+struct StructValuesAttr {
+    name: Option<String>,
+}
+
+impl StructValuesAttr {
+    fn get_identifier(input: &DeriveInput) -> Ident {
+        let name = &input.ident;
+        let values_name = input
+            .attrs
+            .iter()
+            .find(|attr| attr.path.is_ident("struct_values"))
+            .and_then(|attr| attr.parse_args::<StructValuesAttr>().ok())
+            .and_then(|attr| attr.name)
+            .unwrap_or_else(|| format!("{}Values", name));
+
+        Ident::new(&values_name, name.span())
+    }
+
+    fn get_identifier_for_opt(input: &DeriveInput) -> Ident {
+        let name = &input.ident;
+        let values_name = input
+            .attrs
+            .iter()
+            .find(|attr| attr.path.is_ident("opt_struct_values"))
+            .and_then(|attr| attr.parse_args::<StructValuesAttr>().ok())
+            .and_then(|attr| attr.name)
+            .unwrap_or_else(|| format!("{}OptValues", name));
+
+        Ident::new(&values_name, name.span())
+    }
+}
+
+impl Parse for StructValuesAttr {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let mut name = None;
+        while !input.is_empty() {
+            let ident: syn::Ident = input.parse()?;
+            if ident == "name" {
+                input.parse::<Token![=]>()?;
+                name = Some(input.parse::<syn::LitStr>()?.value());
+            } else {
+                return Err(input.error("expected `name`"));
+            }
+        }
+        Ok(StructValuesAttr { name })
+    }
+}
+
 /// Generates a public fields struct.
 ///
 /// WARNING: It's neccessary import macros Serialize and Deserialize to use.
@@ -148,7 +200,6 @@ pub fn DELETE(input: TokenStream) -> TokenStream {
 ///
 ///
 /// ```
-///
 /// Is possible to ignore fields with `#[struct_values(skip)]`:
 /// ```
 /// use web_proc_macros::StructValues;
@@ -188,7 +239,7 @@ pub fn DELETE(input: TokenStream) -> TokenStream {
 /// }
 ///
 /// #[derive(StructValues)]
-/// pub struct User<'a, F> 
+/// pub struct User<'a, F>
 /// where
 ///     F: Foo
 /// {
@@ -203,12 +254,28 @@ pub fn DELETE(input: TokenStream) -> TokenStream {
 ///     foo: FooImpl,
 /// };
 /// ```
+///
+/// Set the name of the generated structure:
+/// ```
+/// use web_proc_macros::StructValues;
+/// use serde_derive::{Serialize, Deserialize};
+///
+/// #[derive(StructValues)]
+/// #[struct_values(name = "UserDestructured")]
+/// pub struct User<'a> {
+///     id: &'a str,
+///     name: &'a str,
+/// }
+///
+/// let _values = UserDestructured {
+///     id: "example.id",
+///     name: "Example User",
+/// };
+/// ```
 #[proc_macro_derive(StructValues, attributes(struct_values))]
 pub fn derive_struct_values(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
-    let name = input.ident;
-    let values_name = format!("{}Values", name);
-    let values_ident = syn::Ident::new(&values_name, name.span());
+    let values_ident = StructValuesAttr::get_identifier(&input);
     let lifetimes: Vec<_> = input.generics.lifetimes().collect();
     let type_params: Vec<_> = input.generics.type_params().collect();
     let where_clause = &input.generics.where_clause;
@@ -275,7 +342,7 @@ pub fn derive_struct_values(input: TokenStream) -> TokenStream {
 ///     status: None,
 /// };
 /// ```
-/// 
+///
 // This macro supports lifetimes and generics:
 /// ```
 /// use web_proc_macros::OptStructValues;
@@ -294,7 +361,7 @@ pub fn derive_struct_values(input: TokenStream) -> TokenStream {
 /// }
 ///
 /// #[derive(OptStructValues)]
-/// pub struct User<'a, F> 
+/// pub struct User<'a, F>
 /// where
 ///     F: Foo
 /// {
@@ -308,19 +375,35 @@ pub fn derive_struct_values(input: TokenStream) -> TokenStream {
 ///     name: Some("Example User"),
 ///     foo: Some(FooImpl),
 /// };
-/// 
+///
 /// let _values: UserOptValues<'_, FooImpl> = UserOptValues {
 ///     id: Some("example.id"),
 ///     name: None,
 ///     foo: None,
 /// };
 /// ```
+///
+/// Set the name of the generated structure:
+/// ```
+/// use web_proc_macros::OptStructValues;
+/// use serde_derive::{Serialize, Deserialize};
+///
+/// #[derive(OptStructValues)]
+/// #[opt_struct_values(name = "UserInput")]
+/// pub struct User<'a> {
+///     id: &'a str,
+///     name: &'a str,
+/// }
+///
+/// let _values = UserInput {
+///     id: Some("example.id"),
+///     ..Default::default()
+/// };
+/// ```
 #[proc_macro_derive(OptStructValues, attributes(opt_struct_values))]
 pub fn derive_opt_struct_values(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
-    let name = input.ident;
-    let values_name = format!("{}OptValues", name);
-    let values_ident = syn::Ident::new(&values_name, name.span());
+    let values_ident = StructValuesAttr::get_identifier_for_opt(&input);
     let lifetimes: Vec<_> = input.generics.lifetimes().collect();
     let type_params: Vec<_> = input.generics.type_params().collect();
     let where_clause = &input.generics.where_clause;
