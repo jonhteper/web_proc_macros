@@ -274,8 +274,46 @@ pub fn derive_struct_values(input: TokenStream) -> TokenStream {
 ///     groups: Some(vec!["Group1".to_string(), "Group2".to_string()]),
 ///     status: None,
 /// };
+/// ```
+/// 
+// This macro supports lifetimes and generics:
+/// ```
+/// use web_proc_macros::OptStructValues;
+/// use serde_derive::{Serialize, Deserialize};
 ///
+/// pub trait Foo {
+///     fn foo(&self) -> bool;
+/// }
+/// #[derive(Debug, Serialize, Deserialize, Clone)]
+/// struct FooImpl;
 ///
+/// impl Foo for FooImpl {
+///     fn foo(&self) -> bool {
+///         true
+///     }
+/// }
+///
+/// #[derive(OptStructValues)]
+/// pub struct User<'a, F> 
+/// where
+///     F: Foo
+/// {
+///     id: &'a str,
+///     name: &'a str,
+///     foo: F,
+/// }
+///
+/// let _values = UserOptValues {
+///     id: Some("example.id"),
+///     name: Some("Example User"),
+///     foo: Some(FooImpl),
+/// };
+/// 
+/// let _values: UserOptValues<'_, FooImpl> = UserOptValues {
+///     id: Some("example.id"),
+///     name: None,
+///     foo: None,
+/// };
 /// ```
 #[proc_macro_derive(OptStructValues, attributes(opt_struct_values))]
 pub fn derive_opt_struct_values(input: TokenStream) -> TokenStream {
@@ -283,6 +321,9 @@ pub fn derive_opt_struct_values(input: TokenStream) -> TokenStream {
     let name = input.ident;
     let values_name = format!("{}OptValues", name);
     let values_ident = syn::Ident::new(&values_name, name.span());
+    let lifetimes: Vec<_> = input.generics.lifetimes().collect();
+    let type_params: Vec<_> = input.generics.type_params().collect();
+    let where_clause = &input.generics.where_clause;
 
     let fields = if let Data::Struct(data_struct) = input.data {
         data_struct.fields
@@ -314,7 +355,7 @@ pub fn derive_opt_struct_values(input: TokenStream) -> TokenStream {
 
     let expanded = quote! {
         #[derive(Serialize, Deserialize, Debug, Clone, Default)]
-        pub struct #values_ident {
+        pub struct #values_ident<#(#lifetimes,)* #(#type_params),*> #where_clause {
             #(#values_fields)*
         }
     };
