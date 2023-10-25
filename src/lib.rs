@@ -1,8 +1,10 @@
 extern crate proc_macro;
 
+use partial_object::partial_object_macro;
 use proc_macro::TokenStream;
 use proc_macro2::Ident;
 use quote::quote;
+use reading_option::reading_options_macro;
 use syn::{
     parse::{Parse, ParseStream},
     parse_macro_input, Data, DeriveInput, Fields, Token,
@@ -11,6 +13,8 @@ use syn::{
 mod delete_macro;
 mod impl_kind_macro;
 mod insert_macro;
+mod partial_object;
+mod reading_option;
 mod select_macro;
 mod update_macro;
 
@@ -444,4 +448,88 @@ pub fn derive_opt_struct_values(input: TokenStream) -> TokenStream {
     };
 
     TokenStream::from(expanded)
+}
+
+/// Create a new struct to select what fields the client need.
+/// The name of the new struct uses the notation `<NAME>Options`
+/// by default.
+///
+/// # Examples
+/// ```rust
+/// use web_proc_macros::ReadingOptions;
+/// use serde_derive;
+///
+/// #[derive(ReadingOptions)]
+/// pub struct User {
+///     id: String,
+///     email: String,
+///     alias: String,
+///     is_active: bool,
+/// }
+///
+/// let user_options = UserOptions {
+///     id: true,
+///     email: false,
+///     alias: true,
+///     is_active: false,
+/// };
+/// ```
+/// Because this macro uses "white list" pattern, you can specify
+/// "always incude" fields:
+/// ```rust
+/// use web_proc_macros::ReadingOptions;
+/// use serde_derive;
+///
+/// #[derive(ReadingOptions)]
+/// pub struct User {
+///     #[reading_options(always)]
+///     id: String,
+///     email: String,
+///     alias: String,
+///     is_active: bool,
+/// }
+///
+/// let user_options = UserOptions {
+///     email: false,
+///     alias: true,
+///     is_active: false,
+/// };
+/// ```
+#[proc_macro_derive(ReadingOptions, attributes(reading_options))]
+pub fn derive_reading_options(input: TokenStream) -> TokenStream {
+    reading_options_macro(input)
+}
+
+/// WARNING: this macro only can work with `ReadingOptions` macro.
+///
+/// Generate a new struct with optional fields, except if there uses
+/// `#[reading_options(always)]`.
+///
+/// The name of the new struct uses the notation `Partial<NAME>`
+/// by default.
+/// 
+/// # Examples
+/// ```rust
+/// use web_proc_macros::{ReadingOptions, PartialObject};
+/// use serde_derive;
+///
+/// #[derive(ReadingOptions, PartialObject)]
+/// pub struct User {
+///     #[reading_options(always)]
+///     id: String,
+///     email: String,
+///     alias: String,
+///     is_active: bool,
+/// }
+///
+/// let user_options = PartialUser {
+///     id: "John Doe".to_string(),
+///     email: None,
+///     alias: None,
+///     is_active: None,
+/// };
+/// ```
+#[proc_macro_derive(PartialObject)]
+pub fn derive_partial_object(input: TokenStream) -> TokenStream {
+    partial_object_macro(input)
 }
