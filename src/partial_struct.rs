@@ -24,17 +24,33 @@ pub fn partial_struct(input: TokenStream) -> TokenStream {
 
     let mut values_fields = Vec::new();
     for field in fields {
-        if field
-            .attrs
-            .iter()
-            .any(|attr| attr.path.is_ident("partial_struct"))
-        {
+        let mut skip = false;
+        let mut other_attrs = Vec::new();
+        for attr in &field.attrs {
+            if attr.path.is_ident("partial_struct") {
+                if let Ok(Meta::List(MetaList { nested, .. })) = attr.parse_meta() {
+                    for meta in nested {
+                        if let NestedMeta::Meta(Meta::Path(path)) = meta {
+                            if path.is_ident("skip") {
+                                skip = true;
+                                break;
+                            }
+                        } else {
+                            other_attrs.push(meta.clone());
+                        }
+                    }
+                }
+            }
+        }
+        if skip {
             continue;
         }
         let field_name = field.ident.unwrap();
         let field_type = field.ty;
+        let field_vis = field.vis;
         values_fields.push(quote! {
-            pub #field_name: #field_type,
+            #(#[#other_attrs])*
+            #field_vis #field_name: #field_type,
         });
     }
 
