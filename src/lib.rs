@@ -14,6 +14,7 @@ mod delete_macro;
 mod impl_kind_macro;
 mod insert_macro;
 mod partial_object;
+mod partial_struct;
 mod reading_option;
 mod select_macro;
 mod update_macro;
@@ -50,20 +51,20 @@ pub fn INSERT(input: TokenStream) -> TokenStream {
 ///
 /// let where_clause = "id = :id";
 /// let query = select_stmt_query!("table", "col1", "col2", where_clause);
-/// assert_eq!(query, "SELECT col1, col2 FROM table WHERE id = :id");    
+/// assert_eq!(query, "SELECT col1, col2 FROM table WHERE id = :id");
 /// ```
 ///
 /// ```
 /// use web_proc_macros::select_stmt_query;
 ///
 /// let query = select_stmt_query!("table", "*", "id = :id");
-/// assert_eq!(query, "SELECT * FROM table WHERE id = :id");    
+/// assert_eq!(query, "SELECT * FROM table WHERE id = :id");
 /// ```
 /// ```
 /// use web_proc_macros::select_stmt_query;
 ///
 /// let query = select_stmt_query!("table", "*");
-/// assert_eq!(query, "SELECT * FROM table");    
+/// assert_eq!(query, "SELECT * FROM table");
 /// ```
 #[proc_macro]
 pub fn select_stmt_query(input: TokenStream) -> TokenStream {
@@ -83,7 +84,7 @@ pub fn SELECT(input: TokenStream) -> TokenStream {
 /// use web_proc_macros::update_stmt_query;
 ///
 /// let query = update_stmt_query!("table", "col1", "col2", "id = :id");
-/// assert_eq!(query, "UPDATE table SET col1 = :col1, col2 = :col2 WHERE id = :id");    
+/// assert_eq!(query, "UPDATE table SET col1 = :col1, col2 = :col2 WHERE id = :id");
 /// ```
 #[proc_macro]
 pub fn update_stmt_query(input: TokenStream) -> TokenStream {
@@ -507,7 +508,7 @@ pub fn derive_reading_options(input: TokenStream) -> TokenStream {
 ///
 /// The name of the new struct uses the notation `Partial<NAME>`
 /// by default.
-/// 
+///
 /// # Examples
 /// ```rust
 /// use web_proc_macros::{ReadingOptions, PartialObject};
@@ -532,4 +533,10 @@ pub fn derive_reading_options(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(PartialObject)]
 pub fn derive_partial_object(input: TokenStream) -> TokenStream {
     partial_object_macro(input)
+}
+
+/// Create a 'sub-struct'.
+#[proc_macro_derive(PartialStruct, attributes(partial_struct))]
+pub fn derive_partial_struct(input: TokenStream) -> TokenStream {
+    partial_struct::partial_struct(input)
 }
