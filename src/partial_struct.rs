@@ -27,6 +27,7 @@ pub fn partial_struct(input: TokenStream) -> TokenStream {
     let mut fields_in_from = Vec::new();
     for field in fields {
         let mut skip = false;
+        let mut pub_field = false;
         let mut other_attrs = Vec::new();
         for attr in &field.attrs {
             if attr.path.is_ident("partial_struct") {
@@ -36,6 +37,10 @@ pub fn partial_struct(input: TokenStream) -> TokenStream {
                             if path.is_ident("skip") {
                                 skip = true;
                                 break;
+                            }
+
+                            if path.is_ident("pub") {
+                                pub_field = true;
                             }
                         } else {
                             other_attrs.push(meta.clone());
@@ -49,11 +54,19 @@ pub fn partial_struct(input: TokenStream) -> TokenStream {
         }
         let field_name = field.ident.unwrap();
         let field_type = field.ty;
-        let field_vis = field.vis;
-        values_fields.push(quote! {
-            #(#[#other_attrs])*
-            #field_vis #field_name: #field_type,
-        });
+
+        if pub_field {
+            values_fields.push(quote! {
+                #(#[#other_attrs])*
+                pub #field_name: #field_type,
+            });
+        } else {
+            let field_vis = field.vis;
+            values_fields.push(quote! {
+                #(#[#other_attrs])*
+                #field_vis #field_name: #field_type,
+            });
+        }
 
         fields_in_from.push(quote! {
             #field_name: value.#field_name,
