@@ -11,6 +11,7 @@ use syn::{
 };
 
 mod delete_macro;
+mod error_kind_macro;
 mod impl_kind_macro;
 mod insert_macro;
 mod partial_object;
@@ -18,6 +19,45 @@ mod partial_struct;
 mod reading_option;
 mod select_macro;
 mod update_macro;
+
+/// Create a kind method for struct
+/// # Examples
+/// ```
+/// use web_proc_macros::ErrorKind;
+///#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+/// enum ErrorType {
+///     A,
+///     B,
+///     C,
+/// }
+///
+/// #[derive(ErrorKind)]
+/// #[error_kind(ErrorType)]
+/// enum CacheError {
+///     #[error_kind(ErrorType, A)]
+///     Poisoned,
+///
+///     #[error_kind(ErrorType, B)]
+///     Missing,
+/// }
+///
+/// #[derive(ErrorKind)]
+/// #[error_kind(ErrorType)]
+/// enum ServiceError {
+///     #[error_kind(transparent)]
+///     Cache(CacheError),
+///
+///     #[error_kind(ErrorType, C)]
+///     Db,
+/// }
+///
+/// assert_eq!(ServiceError::Cache(CacheError::Missing).kind(), ErrorType::B);
+/// assert_eq!(ServiceError::Db.kind(), ErrorType::C);
+/// ```
+#[proc_macro_derive(ErrorKind, attributes(error_kind))]
+pub fn error_kind(input: TokenStream) -> TokenStream {
+    error_kind_macro::error_kind_macro(input)
+}
 
 #[proc_macro_derive(ImplKind, attributes(error_kind))]
 pub fn impl_kind(input: TokenStream) -> TokenStream {
