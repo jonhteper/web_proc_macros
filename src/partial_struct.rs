@@ -104,7 +104,7 @@ fn get_name_traits(input: &DeriveInput) -> (Path, Vec<NestedMeta>) {
 }
 
 /// From https://crates.io/crates/enum-kinds
-fn find_attribute(
+pub fn find_attribute(
     definition: &DeriveInput,
     name: &str,
 ) -> Option<Punctuated<NestedMeta, syn::token::Comma>> {
